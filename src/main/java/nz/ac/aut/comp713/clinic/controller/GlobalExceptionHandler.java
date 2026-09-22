@@ -1,5 +1,8 @@
 package nz.ac.aut.comp713.clinic.controller;
 
+import nz.ac.aut.comp713.clinic.service.AppointmentConflictException;
+import nz.ac.aut.comp713.clinic.service.AppointmentNotFoundException;
+import nz.ac.aut.comp713.clinic.service.InvalidAppointmentTimeException;
 import nz.ac.aut.comp713.clinic.service.PatientExistsException;
 import nz.ac.aut.comp713.clinic.service.PatientNotFoundException;
 
@@ -20,8 +23,10 @@ import java.util.stream.Collectors;
  * Translates every failure into the single {@link ApiError} error model
  * {code, message, path} (the week-6 lab's error contract), so clients get a
  * consistent shape with stable machine-readable codes:
- *
- * <ul>
+ *00 {@code APPOINTMENT_TIME_INVALID} — scheduling rules (future, opening hours)</li>
+ *   <li>415 {@code UNSUPPORTED_MEDIA_TYPE} — wrong request Content-Type</li>
+ *   <li>404 {@code PATIENT_NOT_FOUND}, 404 {@code APPOINTMENT_NOT_FOUND}</li>
+ *   <li>409 {@code PATIENT_EXISTS}, 409 {@code APPOINTMENT_CONFLICT} — double booking
  *   <li>400 {@code INVALID_REQUEST} — bean validation, malformed JSON, bad parameter types</li>
  *   <li>415 {@code UNSUPPORTED_MEDIA_TYPE} — wrong request Content-Type</li>
  *   <li>404 {@code PATIENT_NOT_FOUND}, 409 {@code PATIENT_EXISTS}</li>
@@ -67,6 +72,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PatientExistsException.class)
     public ResponseEntity<ApiError> patientExists(PatientExistsException ex, HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "PATIENT_EXISTS", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AppointmentNotFoundException.class)
+    public ResponseEntity<ApiError> appointmentNotFound(AppointmentNotFoundException ex,
+                                                        HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "APPOINTMENT_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidAppointmentTimeException.class)
+    public ResponseEntity<ApiError> invalidAppointmentTime(InvalidAppointmentTimeException ex,
+                                                           HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "APPOINTMENT_TIME_INVALID", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AppointmentConflictException.class)
+    public ResponseEntity<ApiError> appointmentConflict(AppointmentConflictException ex,
+                                                        HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "APPOINTMENT_CONFLICT", ex.getMessage(), request);
     }
 
     @ExceptionHandler(Exception.class)
