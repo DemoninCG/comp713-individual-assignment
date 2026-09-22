@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Clinic Appointment System — Booking desk</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+    <div class="container site-header__inner">
+        <span class="brand">Clinic Appointment System</span>
+        <nav class="nav">
+            <a class="nav__link" href="index.html">Patient registry</a>
+            <a class="nav__link nav__link--active" href="appointments.html">Booking desk</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    <h1 class="page-title">Booking desk</h1>
+    <p class="page-subtitle">Book, reschedule and cancel appointments. The clinic is open
+        <strong>Mon–Fri, 09:00–17:00</strong>; a patient cannot hold two overlapping slots.</p>
+
+    <div id="banner" class="banner" hidden aria-live="polite"></div>
+
+    <section class="card">
+        <h2 class="card__title">Choose a patient</h2>
+        <p class="card__hint">Everything below applies to the selected patient.</p>
+        <div class="field">
+            <label for="patient-select">Patient</label>
+            <select id="patient-select"></select>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2 class="card__title">Book an appointment</h2>
+        <p class="card__hint">Times are entered as clinic-local time (10–180 minutes).</p>
+        <form id="book-form" autocomplete="off">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="book-date">Date</label>
+                    <input id="book-date" type="date" required>
+                </div>
+                <div class="field">
+                    <label for="book-time">Start time</label>
+                    <input id="book-time" type="time" required>
+                </div>
+                <div class="field">
+                    <label for="book-duration">Duration (minutes)</label>
+                    <input id="book-duration" type="number" min="10" max="180" step="5" value="30" required>
+                </div>
+                <div class="field">
+                    <label for="book-reason">Reason (optional)</label>
+                    <input id="book-reason" type="text" maxlength="200" placeholder="e.g. Annual check-up">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn--primary" type="submit">Book appointment</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2 class="card__title">Booked appointments</h2>
+        <p class="card__hint">Reschedule or cancel any upcoming slot.</p>
+
+        <form id="reschedule-form" class="edit-panel" hidden autocomplete="off">
+            <h3>Reschedule appointment <span id="reschedule-id" class="mono"></span></h3>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="reschedule-date">Date</label>
+                    <input id="reschedule-date" type="date" required>
+                </div>
+                <div class="field">
+                    <label for="reschedule-time">Start time</label>
+                    <input id="reschedule-time" type="time" required>
+                </div>
+                <div class="field">
+                    <label for="reschedule-duration">Duration (minutes)</label>
+                    <input id="reschedule-duration" type="number" min="10" max="180" step="5" required>
+                </div>
+                <div class="field">
+                    <label for="reschedule-reason">Reason (optional)</label>
+                    <input id="reschedule-reason" type="text" maxlength="200">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn--primary" type="submit">Save new slot</button>
+                <button class="btn btn--secondary" type="button" id="reschedule-keep">Keep as is</button>
+            </div>
+        </form>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="appointments-body"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script type="module" src="js/booking.js"></script>
+</body>
+</html>
