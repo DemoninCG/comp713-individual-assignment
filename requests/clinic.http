@@ -1,0 +1,174 @@
+### Clinic Appointment System — API request collection
+### COMP713 Assignment 2 (Option A)
+###
+### Use with the VS Code REST Client extension while the system is running:
+###     .\mvnw.cmd spring-boot:run
+### Expected results are noted above each request. Identical JSON payloads for
+### curl.exe live in this folder as *.json — on Windows PowerShell, inline JSON in
+### `curl -d` gets mangled, so curl uses `--data-binary "@requests\file.json"`
+### (see README "Testing the main functions").
+###
+### The ids used below assume a fresh start with the demo seed (patients 1-3,
+### appointments 1-4) plus the registration request in this file (patient 4) and
+### one booking (appointment 5).
+
+### ------------------------------------------------------------------
+### Patients
+### ------------------------------------------------------------------
+
+### List all patients (200, ordered by last name)
+GET http://localhost:8080/api/v1/patients
+
+### Filter by last name, case-insensitive (200, one match)
+GET http://localhost:8080/api/v1/patients?lastName=ngata
+
+### Patient detail including appointments (200)
+GET http://localhost:8080/api/v1/patients/1
+
+### Unknown patient (404 PATIENT_NOT_FOUND)
+GET http://localhost:8080/api/v1/patients/999
+
+### Register a patient (201 + Location: .../api/v1/patients/4)
+POST http://localhost:8080/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "Mere",
+  "lastName": "Wiremu",
+  "email": "mere.wiremu@example.com",
+  "phone": "021 555 0111"
+}
+
+### Duplicate e-mail (409 PATIENT_EXISTS)
+POST http://localhost:8080/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "Aroha",
+  "lastName": "Copy",
+  "email": "aroha.ngata@example.com"
+}
+
+### Invalid body: blank first name + malformed e-mail (400 INVALID_REQUEST)
+POST http://localhost:8080/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "",
+  "lastName": "Wiremu",
+  "email": "not-an-email"
+}
+
+### Malformed JSON body (400 INVALID_REQUEST)
+POST http://localhost:8080/api/v1/patients
+Content-Type: application/json
+
+{ not json
+
+### ------------------------------------------------------------------
+### Appointments (fixed weekday dates far in the future keep the results stable)
+### ------------------------------------------------------------------
+
+### Read a booked slot (200)
+GET http://localhost:8080/api/v1/appointments/5
+
+### Book a free slot for patient 4 (201 + Location: .../api/v1/appointments/5)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T10:00:00",
+  "durationMinutes": 30,
+  "reason": "Consultation"
+}
+
+### Overlapping slot for the same patient (409 APPOINTMENT_CONFLICT)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T10:15:00",
+  "durationMinutes": 30,
+  "reason": "Should clash"
+}
+
+### Identical start time (409 APPOINTMENT_CONFLICT)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T10:00:00",
+  "durationMinutes": 30,
+  "reason": "Same start"
+}
+
+### Slot in the past (400 APPOINTMENT_TIME_INVALID)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2020-01-06T10:00:00",
+  "durationMinutes": 30,
+  "reason": "Too late"
+}
+
+### Weekend slot (400 APPOINTMENT_TIME_INVALID)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-06T10:00:00",
+  "durationMinutes": 30,
+  "reason": "Sunday attempt"
+}
+
+### Before opening hours (400 APPOINTMENT_TIME_INVALID)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T08:00:00",
+  "durationMinutes": 30,
+  "reason": "Too early"
+}
+
+### Missing durationMinutes (400 INVALID_REQUEST)
+POST http://localhost:8080/api/v1/patients/4/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T10:00:00"
+}
+
+### Book for an unknown patient (404 PATIENT_NOT_FOUND)
+POST http://localhost:8080/api/v1/patients/999/appointments
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-07T10:00:00",
+  "durationMinutes": 30,
+  "reason": "Consultation"
+}
+
+### Reschedule appointment 5 (200, moved slot)
+PUT http://localhost:8080/api/v1/appointments/5
+Content-Type: application/json
+
+{
+  "startAt": "2030-01-08T14:00:00",
+  "durationMinutes": 45,
+  "reason": "Moved"
+}
+
+### Cancel appointment 5 (204, empty body)
+DELETE http://localhost:8080/api/v1/appointments/5
+
+### Read the cancelled appointment (404 APPOINTMENT_NOT_FOUND)
+GET http://localhost:8080/api/v1/appointments/5
+
+### ------------------------------------------------------------------
+### Health
+### ------------------------------------------------------------------
+
+### Actuator health check (200 {"status":"UP"})
+GET http://localhost:8080/actuator/health

@@ -113,6 +113,7 @@ class AppointmentServiceUnitTest {
         assertThatThrownBy(() -> service.bookAppointment(PATIENT_ID, request(SLOT.plusMinutes(30), 30)))
                 .isInstanceOf(AppointmentConflictException.class);
 
+        verify(patients).findByIdForUpdate(PATIENT_ID); // per-patient serialisation lock
         verify(appointments, never()).insertIfNoOverlap(any(), any(), any(), any(), any());
     }
 

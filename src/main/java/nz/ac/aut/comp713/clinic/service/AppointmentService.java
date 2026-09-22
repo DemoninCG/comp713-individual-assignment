@@ -22,15 +22,20 @@ import java.util.Objects;
  * Appointment use cases: {@code bookAppointment}, {@code getAppointment},
  * {@code rescheduleAppointment}, {@code cancelAppointment}.
  *
- * <p>Concurrency defence (the week-5 lab's three layers):</p>
+ * <p>Concurrency defence (layered — the week-5 lab's lesson that "a transaction is
+ * atomic, but it is not automatically concurrency-safe"):</p>
  * <ol>
- *   <li><b>Fail fast</b> — patient/appointment existence, time rules, and a
- *   fail-fast overlap scan all run before any write, so callers get clear errors;</li>
+ *   <li><b>Serialise per patient</b> — every booking change first takes a
+ *   pessimistic row lock on the patient, so concurrent changes for one patient run
+ *   one at a time (H2 has no range-exclusion constraint, so an atomic statement
+ *   alone cannot stop two overlapping ranges from racing past their checks);</li>
+ *   <li><b>Fail fast</b> — existence checks, time rules, and the overlap scan run
+ *   before any write, so callers get clear errors;</li>
  *   <li><b>Atomic check-and-write</b> — {@code insertIfNoOverlap} /
  *   {@code updateIfNoOverlap} test the overlap and write in one database statement;
- *   zero affected rows means a racing request won the slot;</li>
- *   <li><b>Constraint backstop</b> — {@code uk_appointment_patient_start} rejects a
- *   same-start double booking, which the service translates into the same conflict
+ *   zero affected rows means the slot was taken;</li>
+ *   <li><b>Constraint backstop</b> — {@code uk_appointment_patient_start} rejects
+ *   an identical-start double booking, translated into the same conflict
  *   error.</li>
  * </ol>
  */
@@ -143,11 +148,12 @@ public class AppointmentService {
     }
 
     /**
-     * Fail-fast overlap scan (layer 1): clear errors without touching the write path.
-     * The atomic statements (layer 2) still guard the write itself when two requests
-     * pass this check at the same time.
+     * Takes the per-patient serialisation lock (defence layer 1) and then runs the
+     * fail-fast overlap scan (layer 2) — clear errors without touching the write
+     * path. The atomic statements (layer 3) still guard the write itself.
      */
     private void rejectOverlap(long patientId, LocalDateTime startAt, LocalDateTime endAt, Long excludeId) {
+        lockPatient(patientId);
         List<Appointment> existing = appointments.findByPatientIdOrderByStartAtAsc(patientId);
         boolean overlaps = existing.stream()
                 .filter(other -> excludeId == null || !Objects.equals(other.getId(), excludeId))
@@ -155,6 +161,18 @@ public class AppointmentService {
         if (overlaps) {
             throw new AppointmentConflictException(patientId, startAt);
         }
+    }
+
+    /**
+     * Serialises concurrent booking changes for one patient: the pessimistic row
+     * lock is held until the transaction commits, so the overlap check and write
+     * cannot interleave with another booking for the same patient. Locking is
+     * per-patient, so different patients never contend (the no-overlap rule is
+     * per patient too).
+     */
+    private void lockPatient(long patientId) {
+        // Executed for its locking side effect; existence is checked by the caller.
+        patients.findByIdForUpdate(patientId);
     }
 
     private static LocalDateTime endOf(AppointmentRequest request) {

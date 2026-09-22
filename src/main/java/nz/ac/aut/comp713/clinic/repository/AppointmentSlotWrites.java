@@ -13,11 +13,13 @@ import java.time.LocalDateTime;
  * existing appointment of the same patient (nothing is written in that case).</p>
  *
  * <p>The statements are parameterised SQL (week-3 lab style) executed over JDBC; see
- * {@link AppointmentSlotWritesImpl} for the exact SQL. The service layer keeps a
- * fail-fast overlap check in front of these calls so callers get a clear error
- * without touching the database; these statements are the final protection when
- * two requests race, backed up by the {@code uk_appointment_patient_start}
- * constraint.</p>
+ * {@link AppointmentSlotWritesImpl} for the exact SQL. They are one layer of a
+ * layered defence: the service serialises concurrent changes per patient with a
+ * pessimistic row lock (H2 has no range-exclusion constraint, so an atomic
+ * statement alone cannot stop two overlapping ranges from racing), keeps a
+ * fail-fast overlap check in front for clear errors, and the
+ * {@code uk_appointment_patient_start} constraint is the final backstop for
+ * identical start times.</p>
  */
 public interface AppointmentSlotWrites {
 

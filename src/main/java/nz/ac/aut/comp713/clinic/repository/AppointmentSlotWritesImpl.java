@@ -9,8 +9,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * JPA or any other storage technology — week-5 lecture).
  *
  * <p>Both statements test for an overlapping appointment of the same patient and
- * write in one atomic step, so two concurrent bookings cannot both succeed even if
- * they pass any application-level checks at the same time. Overlap is defined as
+ * write in one atomic step. Together with the per-patient row lock taken by the
+ * service, concurrent bookings for the same patient cannot both succeed; the
+ * atomic statement also keeps the write itself consistent if two requests ever
+ * interleave. Overlap is defined as
  * {@code existing.start_at < newEnd AND existing.end_at > newStart} (touching
  * end-to-start is allowed, i.e. back-to-back bookings).</p>
  *
